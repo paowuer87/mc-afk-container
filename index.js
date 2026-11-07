@@ -7,7 +7,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ==================== 配置区域 ====================
-// 环境变量 SERVERS 示例（推荐用这个）：
+// 环境变量 SERVERS 示例：
 /*
 [
   {
@@ -41,7 +41,7 @@ const BOT_PROTOCOL_VERSION = process.env.BOT_PROTOCOL_VERSION || '26.1';
 const PROXY_BASE_PORT = parseInt(process.env.PROXY_BASE_PORT) || 25568;
 
 // 不支持直接连接、需要走代理的版本（可自行扩展）
-const NEED_PROXY_VERSIONS = ['26.3', '26.2']; // 根据实际情况调整
+const NEED_PROXY_VERSIONS = ['26.3', '26.2'];
 
 // ==================================================
 
@@ -49,7 +49,7 @@ let servers = [];
 try {
   if (process.env.SERVERS) {
     servers = JSON.parse(process.env.SERVERS);
-    if (!Array.isArray((servers)) throw new Error('SERVERS 必须是 JSON 数组');
+    if (!Array.isArray(servers)) throw new Error('SERVERS 必须是 JSON 数组');
   } else {
     // 兼容旧单服务器写法
     servers = [{
@@ -118,7 +118,7 @@ function startViaProxy(targetHost, targetPort, targetVersion, localPort) {
     });
 
     proc.stderr.on('data', (data) => {
-      // 可选：打印错误
+      // 可选：打印错误日志
       // console.error(`[ViaProxy ${localPort}]`, data.toString().trim());
     });
 
@@ -210,7 +210,7 @@ app.get('/', (req, res) => {
     username: s.username,
     target: `${s.host}:${s.port}`,
     version: s.version,
-    mode: needsProxy(s) ? `代理 → 127.0.0.1:${s._proxyPort}` : '直连'
+    mode: needsProxy(s) ? `代理 → 127.0.0.1:${s._proxyPort || '未启动'}` : '直连'
   }));
 
   res.send(`
@@ -239,6 +239,14 @@ app.listen(PORT, '0.0.0.0', () => {
 
 // 优雅退出
 process.on('SIGINT', () => {
+  console.log('正在关闭所有 ViaProxy...');
+  for (const { process: proc } of proxyProcesses.values()) {
+    try { proc.kill(); } catch (e) {}
+  }
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
   console.log('正在关闭所有 ViaProxy...');
   for (const { process: proc } of proxyProcesses.values()) {
     try { proc.kill(); } catch (e) {}
