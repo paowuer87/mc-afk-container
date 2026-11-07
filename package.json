@@ -9,6 +9,6 @@
   "dependencies": {
     "express": "^4.19.2",
     "minecraft-data": "latest",
-    "mineflayer": "latest"
+    "@wp2508/mineflayer": "latest"
   }
 }
