@@ -1,25 +1,16 @@
 const express = require('express');
-const mineflayer = require('mineflayer');
+// 使用支持 26.3 的 fork
+const mineflayer = require('@wp2508/mineflayer');
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-// 【版本兼容垫片】
-const mcData = require('minecraft-data');
-if (!mcData.versionsByMinecraftVersion.pc['1.21.11']) {
-    const v1214 = mcData.versionsByMinecraftVersion.pc['1.21.4'];
-    if (v1214) {
-        mcData.versionsByMinecraftVersion.pc['1.21.11'] = v1214;
-        mcData.supportedVersions.pc.push('1.21.11');
-    }
-}
 
 // ==================== 多服务器配置（优先读取环境变量） ====================
 /**
  * 推荐使用环境变量 SERVERS，传入 JSON 字符串
  * 示例：
  * SERVERS='[
- *   {"host":"eu16-free.falixserver.net","port":28907,"username":"Bot1","version":"1.21.11"},
- *   {"host":"另一个服务器.com","port":25565,"username":"Bot2","version":"1.20.4"}
+ *   {"host":"join.wrdnpz","port":25482,"username":"Bot1","version":"26.3"},
+ *   {"host":"另一个服务器.com","port":25565,"username":"Bot2","version":"1.21.1"}
  * ]'
  */
 let servers = [];
@@ -32,13 +23,13 @@ try {
         }
         console.log(`[配置] 已从环境变量 SERVERS 加载 ${servers.length} 个服务器`);
     } else {
-        // 没有设置 SERVERS 时使用默认配置（方便本地测试）
+        // 没有设置 SERVERS 时使用默认配置
         servers = [
             {
-                host: process.env.MC_HOST || 'eu16-free.falixserver.net',
-                port: parseInt(process.env.MC_PORT) || 28907,
-                username: process.env.MC_USER || 'Container_Bot',
-                version: process.env.MC_VERSION || '1.21.11'
+                host: process.env.MC_HOST || 'join.wrdnpz',
+                port: parseInt(process.env.MC_PORT) || 25482,
+                username: process.env.MC_USER || 'Bot1',
+                version: process.env.MC_VERSION || '26.3'
             }
         ];
         console.log('[配置] 未检测到 SERVERS 环境变量，使用默认单服务器配置');
@@ -75,7 +66,8 @@ function startBot(options) {
         host: options.host,
         port: options.port || 25565,
         username: options.username || 'AFK_Bot',
-        version: options.version || false, // false = 自动检测
+        version: options.version || false,   // 传 false 会尝试自动检测
+        // auth: 'offline',                 // 如果是离线服可以加这行
     });
 
     bot.on('spawn', () => {
@@ -110,7 +102,7 @@ function startBot(options) {
 setTimeout(() => {
     console.log(`准备启动 ${servers.length} 个服务器的机器人...`);
     servers.forEach((server, index) => {
-        // 错开启动时间，避免同时大量连接
+        // 错开启动时间
         setTimeout(() => {
             startBot(server);
         }, index * 3000);
