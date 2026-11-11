@@ -33,16 +33,49 @@ app.get('/health', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => console.log(`网页服务已成功绑定端口: ${PORT}`));
 
 /**
+ * ==================== 硬编码多账号（方式二） ====================
+ * 如果没有设置环境变量 MC_BOTS / MC_HOST，就会使用这里的配置。
+ * 直接在这个数组里添加或修改账号即可。
+ */
+const HARDCODED_BOTS = [
+    {
+        id: 'bot-a',
+        host: 'server1.example.com',
+        port: 25565,
+        username: 'MyBot1',
+        version: '1.21.1',
+        auth: 'offline'
+    },
+    {
+        id: 'bot-b',
+        host: 'play.hypixel.net',
+        port: 25565,
+        username: 'MyBot2',
+        version: '1.21.1',
+        auth: 'offline'
+    },
+    {
+        id: 'bot-c',
+        host: 'another.server.com',
+        port: 25566,
+        username: 'MyBot3',
+        version: '1.20.4',
+        auth: 'offline'
+    }
+    // 继续往下加即可
+];
+
+/**
  * 解析多账号配置
- * 支持两种方式：
- * 1. 环境变量 MC_BOTS = JSON 数组字符串
- *    例: [{"host":"server1.com","port":25565,"username":"Bot1","version":"1.21.1"},{"host":"server2.com","port":25565,"username":"Bot2"}]
- * 2. 兼容旧版单账号：MC_HOST / MC_PORT / MC_USER / MC_VERSION
+ * 优先级：
+ * 1. 环境变量 MC_BOTS = JSON 数组字符串（推荐）
+ * 2. 旧版单账号环境变量：MC_HOST / MC_PORT / MC_USER / MC_VERSION / MC_AUTH
+ * 3. 代码中的 HARDCODED_BOTS 硬编码列表
  */
 function loadBotConfigs() {
     const configs = [];
 
-    // 优先使用 MC_BOTS JSON
+    // 1. 优先使用 MC_BOTS JSON
     if (process.env.MC_BOTS) {
         try {
             const parsed = JSON.parse(process.env.MC_BOTS);
@@ -65,7 +98,7 @@ function loadBotConfigs() {
         }
     }
 
-    // 兼容旧版单账号环境变量
+    // 2. 兼容旧版单账号环境变量
     if (configs.length === 0) {
         const host = process.env.MC_HOST;
         const username = process.env.MC_USER || 'Container_Bot';
@@ -81,9 +114,26 @@ function loadBotConfigs() {
         }
     }
 
-    // 如果还是没有配置，使用默认值（方便本地测试）
+    // 3. 如果环境变量都没有，使用代码里硬编码的多账号
     if (configs.length === 0) {
-        console.warn('[警告] 未检测到任何机器人配置，使用默认单账号示例。请设置 MC_BOTS 或 MC_HOST 等环境变量。');
+        console.log('[配置] 未检测到环境变量，使用 HARDCODED_BOTS 硬编码账号列表');
+        HARDCODED_BOTS.forEach((item, idx) => {
+            if (item.host && item.username) {
+                configs.push({
+                    id: item.id || `bot-${idx + 1}`,
+                    host: item.host,
+                    port: parseInt(item.port) || 25565,
+                    username: item.username,
+                    version: item.version || '1.21.1',
+                    auth: item.auth || 'offline'
+                });
+            }
+        });
+    }
+
+    // 最终兜底（防止硬编码也空）
+    if (configs.length === 0) {
+        console.warn('[警告] 未检测到任何机器人配置，使用默认单账号示例。');
         configs.push({
             id: 'bot-1',
             host: 'localhost',
